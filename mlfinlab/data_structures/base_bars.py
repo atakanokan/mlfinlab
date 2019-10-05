@@ -3,11 +3,17 @@ A base class for the various bar types. Includes the logic shared between classe
 duplicated code.
 """
 
+#%%
 from abc import ABC, abstractmethod
 
 import pandas as pd
 import numpy as np
+import sys
+import os
 
+# from data.online_data_reading import create_fake_online_ticks
+sys.path.append(os.getcwd())
+from data.online_data_reading import create_fake_online_ticks
 
 class BaseBars(ABC):
     """
@@ -16,7 +22,7 @@ class BaseBars(ABC):
     they are included here so as to avoid a complicated nested class structure.
     """
 
-    def __init__(self, file_path, metric, batch_size=2e7):
+    def __init__(self, file_path, metric, batch_size=1):
         """
         Constructor
 
@@ -27,12 +33,16 @@ class BaseBars(ABC):
         # Base properties
         self.file_path = file_path
         self.metric = metric
-        self.batch_size = batch_size
+        self.batch_size = 1 # =1 because tick by tick read || batch_size
         self.prev_tick_rule = 0
 
         # Batch_run properties
         self.flag = False  # The first flag is false since the first batch doesn't use the cache
         self.cache = []
+
+        # reads ticks from a csv file
+        # queue.Queue instance
+        self.ticks = create_fake_online_ticks(filepath = file_path, nrows = int(5e5))
 
     def batch_run(self, verbose=True, to_csv=False, output_path=None):
         """
@@ -46,8 +56,9 @@ class BaseBars(ABC):
         """
 
         # Read in the first row & assert format
-        first_row = pd.read_csv(self.file_path, nrows=1)
-        self._assert_csv(first_row)
+        # first_row = pd.read_csv(self.file_path, nrows=1)
+        # self._assert_csv(first_row)
+        index, first_row = self.ticks.get()
 
         if to_csv is True:
             header = True  # if to_csv is True, header should written on the first batch only
@@ -60,7 +71,10 @@ class BaseBars(ABC):
         count = 0
         final_bars = []
         cols = ['date_time', 'open', 'high', 'low', 'close', 'volume']
-        for batch in pd.read_csv(self.file_path, chunksize=self.batch_size):
+        # for batch in pd.read_csv(self.file_path, chunksize=self.batch_size):
+        while not self.ticks.empty():
+            index, batch = self.ticks.get()
+            
             if verbose:  # pragma: no cover
                 print('Batch number:', count)
 

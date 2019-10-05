@@ -21,7 +21,11 @@ https://towardsdatascience.com/financial-machine-learning-part-0-bars-745897d4e4
 # Imports
 from collections import namedtuple
 import numpy as np
+import os
+import sys
 
+# add mlfinlab to path
+sys.path.append(os.getcwd() + "/third_party/mlfinlab/")
 from mlfinlab.util.fast_ewma import ewma
 from mlfinlab.data_structures.base_bars import BaseBars
 
@@ -75,12 +79,21 @@ class RunBars(BaseBars):
 
         # Iterate over rows
         list_bars = []
-        for row in data.values:
+        # for row in data.values:
+        if True:
+            row = data
+
             # Set variables
             cum_ticks += 1
-            date_time = row[0]
-            price = np.float(row[1])
-            volume = row[2]
+            date_time = row["time"] # row[0]
+            price = np.float((row["bid"] + row["ask"])/2) # np.float(row[1])
+            # volume = row[2]
+            if row["volume"] != 0.0:
+                volume = row["volume"]
+            else:
+                # for fx, when volume is not available, set it as tick volume = 1
+                volume = 1
+
             cum_volume += volume
 
             # Update high low prices
@@ -282,3 +295,29 @@ def get_tick_run_bars(file_path, num_prev_bars, exp_num_ticks_init=100000,
         verbose=verbose, to_csv=to_csv, output_path=output_path)
 
     return tick_run_bars
+
+
+#%%
+### TESTS
+if __name__ == "__main__":
+    print("#################################\nTESTING RUN DATA STRUCTURES\n########################################")
+
+
+    ### TICK RUNS BARS
+    bars = get_tick_run_bars(file_path = './data/icm_mt5/EURUSD_ticks.csv', 
+                                num_prev_bars = 3, exp_num_ticks_init = 1000,
+                                batch_size=1, verbose=False, to_csv=False, output_path=None)
+    print("\n\nTICK RUNS BARS: \n{}".format(bars))
+
+    ### VOLUME RUNS BARS
+    bars = get_volume_run_bars(file_path = './data/icm_mt5/EURUSD_ticks.csv', 
+                                    num_prev_bars = 3, exp_num_ticks_init = 1000,
+                                    batch_size=1, verbose=False, to_csv=False, output_path=None)
+    print("\n\nVOLUME RUNS BARS: \n{}".format(bars))
+
+    ### DOLLAR RUNS BARS
+    bars = get_dollar_run_bars(file_path = './data/icm_mt5/EURUSD_ticks.csv', 
+                                        num_prev_bars = 3, exp_num_ticks_init = 1000,
+                                        batch_size=1, verbose=False, to_csv=False, output_path=None)
+    print("\n\nDOLLAR RUN BARS: \n{}".format(bars))
+    

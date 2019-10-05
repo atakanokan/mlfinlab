@@ -15,12 +15,18 @@ Lopez de Prado, et al.
 Many of the projects going forward will require Dollar and Volume bars.
 """
 
+#%%
+
 # Imports
 from collections import namedtuple
 import numpy as np
+import sys
+import os
 
+# add mlfinlab to path
+sys.path.append(os.getcwd() + "/third_party/mlfinlab/")
 from mlfinlab.data_structures.base_bars import BaseBars
-
+# from third_party.mlfinlab.mlfinlab.data_structures.base_bars import BaseBars
 
 class StandardBars(BaseBars):
     """
@@ -52,11 +58,21 @@ class StandardBars(BaseBars):
 
         # Iterate over rows
         list_bars = []
-        for row in data.values:
+        # print("data: \n{}".format(data))
+        # for row in data.values:
+        if True:
+            row = data
+            # print("row: \n{}".format(row))
+
             # Set variables
-            date_time = row[0]
-            price = np.float(row[1])
-            volume = row[2]
+            date_time = row["time"] # row[0]
+            price = np.float((row["bid"] + row["ask"])/2) # np.float(row[1])
+            # volume = row[2]
+            if row["volume"] != 0.0:
+                volume = row["volume"]
+            else:
+                # for fx, when volume is not available, set it as tick volume = 1
+                volume = 1
 
             # Update high low prices
             high_price, low_price = self._update_high_low(
@@ -185,3 +201,26 @@ def get_tick_bars(file_path, threshold=2800, batch_size=20000000, verbose=True, 
                         threshold=threshold, batch_size=batch_size)
     tick_bars = bars.batch_run(verbose=verbose, to_csv=to_csv, output_path=output_path)
     return tick_bars
+
+#%%
+### TESTS
+if __name__ == "__main__":
+    print("#################################\nTESTING STANDARD DATA STRUCTURES\n############################################")
+
+
+    ### TICK BARS
+    bars = get_tick_bars(file_path = './data/icm_mt5/EURUSD_ticks.csv', threshold=int(1e2), 
+                         batch_size=1, verbose=False, to_csv=False, output_path=None)
+    print("\n\nTICK BARS: \n{}".format(bars))
+
+    ### VOLUME BARS
+    bars = get_volume_bars(file_path = './data/icm_mt5/EURUSD_ticks.csv', threshold=int(1e2), 
+                         batch_size=1, verbose=False, to_csv=False, output_path=None)
+    print("\n\nVOLUME BARS: \n{}".format(bars))
+
+    ### DOLLAR BARS
+    bars = get_dollar_bars(file_path = './data/icm_mt5/EURUSD_ticks.csv', threshold=int(1e2), 
+                         batch_size=1, verbose=False, to_csv=False, output_path=None)
+    print("\n\nDOLLAR BARS: \n{}".format(bars))
+
+#%%
